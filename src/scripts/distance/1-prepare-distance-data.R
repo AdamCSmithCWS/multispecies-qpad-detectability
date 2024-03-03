@@ -16,7 +16,7 @@ source("src/functions/generate-phylo-corr.R")
 
 ####### Read Data #################################
 
-load("data/raw/dist_count_matrix.rda")
+dist_count_matrix <- readRDS("data/raw/dist_count_matrix_project.rds")
 load("data/raw/dist_design.rda")
 load(file = "data/generated/corr_matrix_predict.rda")
 binomial <- read.csv("data/generated/binomial_names.csv")
