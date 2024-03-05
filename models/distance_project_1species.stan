@@ -24,7 +24,7 @@ functions {
             Pi[Pi_index,k] = (1 - exp(-(max_dist[i,k]^2 / exp(log_tau[project[i]])^2))) /
               (1 - exp(-(max_dist[i,bands_per_sample[i]]^2 / exp(log_tau[project[i]])^2)));
           }
-        }
+        } 
       Pi[Pi_index,bands_per_sample[i]] = 1 - sum(Pi[Pi_index,]); // what if the final band was used as the constraint?
         
       lp = lp + multinomial_lupmf(slice_abund_per_band[Pi_index, ] | to_vector(Pi[Pi_index, ]));
@@ -36,6 +36,7 @@ functions {
   }
   
 }
+
 
 data {
   int<lower = 1> n_samples;           // total number of sampling events i
@@ -57,7 +58,7 @@ parameters {
 transformed parameters{
   vector[n_projects] log_tau;
   
-  log_tau = sd_log_tau*log_tau_raw;
+  log_tau = sd_log_tau*log_tau_raw + log_TAU;
   
 }
 
