@@ -67,6 +67,8 @@ model {
   log_TAU ~ std_normal();
   sd_log_tau ~ std_normal();
   
+  //print(log_tau);
+  
   target += reduce_sum(partial_sum_lupmf,
                        abund_per_band,
                        grainsize,

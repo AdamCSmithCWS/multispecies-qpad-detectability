@@ -51,7 +51,7 @@ dist_count_matrix <- dist_count_matrix %>%
 n_c_proj <- dist_count_matrix %>% 
   group_by(proj) %>% 
   summarise(n_counts = n()) %>% 
-  filter(n_counts > 10)
+  filter(n_counts > 100)
 
 dist_count_matrix <- dist_count_matrix %>% 
   filter(proj %in% n_c_proj$proj)
@@ -84,10 +84,11 @@ projs <- count_design %>%
   select(proj,Distance_Method) %>% 
   distinct()
 
-n_bands <- projs %>% 
+n_bands_full <- projs %>% 
   mutate( n_band = 0,
                       flag_no_obs_near = NA,
                       flag_no_obs_far = NA,
+          flag_no_obs_mid = NA,
           SumInt1 = NA,
           SumInt2 = NA,
           SumInt3 = NA,
@@ -103,10 +104,10 @@ n_bands <- projs %>%
           SumInt13 = NA,
           total_obs = 0)
 
-for(i in 1:nrow(n_bands)){
+for(i in 1:nrow(n_bands_full)){
   
-  p <- n_bands[i,"proj"]
-  m <- n_bands[i,"Distance_Method"]
+  p <- n_bands_full[i,"proj"]
+  m <- n_bands_full[i,"Distance_Method"]
   tmp1 <- count_design %>% 
     filter(proj == p,
            Distance_Method == m)
@@ -119,20 +120,26 @@ for(i in 1:nrow(n_bands)){
   n_intrvls <- length(which(!is.na(intrvls)))
   
   abunds <- as.integer(colSums(tmp1[,paste0("Int",1:n_intrvls)]))
-  
+  sum_abunds <- sum(abunds,na.rm = TRUE)
+  p_dist <- abunds/sum_abunds
+  if(length(p_dist) > 2){
+    p_dist <- p_dist[-c(1,length(p_dist))]
+  }
 
-  n_bands[i,paste0("SumInt",1:n_intrvls)] <- abunds
-  n_bands[i,"n_band"] <- n_intrvls
-  n_bands[i,"flag_no_obs_near"] <- ifelse(abunds[1] == 0,TRUE,FALSE)
-  n_bands[i,"flag_no_obs_far"] <- ifelse(abunds[n_intrvls] == 0,TRUE,FALSE)
-  n_bands[i,"total_obs"] <- sum(abunds,na.rm = TRUE)
+  n_bands_full[i,paste0("SumInt",1:n_intrvls)] <- abunds
+  n_bands_full[i,"n_band"] <- n_intrvls
+  n_bands_full[i,"flag_no_obs_near"] <- ifelse(abunds[1] == 0,TRUE,FALSE)
+  n_bands_full[i,"flag_no_obs_far"] <- ifelse(abunds[n_intrvls] == 0,TRUE,FALSE)
+  n_bands_full[i,"flag_no_obs_mid"] <- ifelse(sum_abunds > 100 & any(p_dist < 0.01),TRUE,FALSE)
+  n_bands_full[i,"total_obs"] <- sum(abunds,na.rm = TRUE)
+  
 }
 
-n_bands <- n_bands %>% 
+n_bands_full <- n_bands_full %>% 
   arrange(-flag_no_obs_far,-total_obs)
 
-proj_problem <- n_bands %>% 
-  filter(flag_no_obs_near | flag_no_obs_far) %>% 
+proj_problem <- n_bands_full %>% 
+  filter(flag_no_obs_near | flag_no_obs_far | flag_no_obs_mid) %>% 
   distinct()
 
 write_csv(proj_problem,"possible_prob_projs.csv")
@@ -144,7 +151,7 @@ count_design <- count_design %>%
 n_c_proj3 <- count_design %>% 
   group_by(proj) %>% 
   summarise(n_counts = n()) %>% 
-  filter(n_counts > 10)
+  filter(n_counts > 100)
 
 count_design <- count_design %>% 
   filter(proj %in% n_c_proj3$proj)
@@ -164,14 +171,6 @@ for (i in col_names)
 }
 
 # Get proj codes and order of proj codes for the Prediction Matrix
-# proj_pred <- gsub(pattern = "_",
-#                      replacement= " ",
-#                      x = rownames(corr_matrix_predict))
-# binomial_pred <- binomial[which(binomial$Scientific_BT %in% proj_pred), ]
-# binomial_pred <- binomial_pred[match(proj_pred, binomial_pred$Scientific_BT), ]
-#' There is a non-zero chance that Rufous hummingbird is weirdly a problematic proj
-#' so we are going to get rid of it.
-# binomial_pred <- binomial_pred[-which(binomial_pred$Code == "RUHU"), ]
 proj_pred_code <- unique(count_design$proj)
 
 # # Create subset of traits dataset for the prediction matrix
@@ -186,7 +185,7 @@ names(Y_pred) <- proj_pred_code
 D_pred <- vector(mode = "list", length = length(proj_pred_code))
 names(D_pred) <- proj_pred_code
 
-# Species indicator list
+# project indicator list
 pr_list_pred <- vector(mode = "list", length = length(proj_pred_code))
 names(pr_list_pred) <- proj_pred_code
 
@@ -219,6 +218,9 @@ pr_pred_numeric <- data.frame(proj = proj_pred_code,
                               num = seq(1, length(proj_pred_code)))
 pr_pred_numeric <- inner_join(pr_list_pred, pr_pred_numeric, by= "proj")
 
+
+pr_list <- pr_pred_numeric %>% 
+  distinct()
 #' Create vector of indices corresponding to species modelled by centred and non-
 #' centred parameterizations
 count_per_pr <- data.frame(table(pr_pred_numeric$num))
@@ -228,6 +230,12 @@ proj_cp <- as.numeric(setdiff(count_per_pr$Var1, proj_ncp))
 # species_ncp <- sort(c(species_ncp,
 #                  setdiff(as.numeric(count_per_sp$Var1), c(species_ncp, species_cp))))
 
+pr_list <- pr_list %>% 
+  bind_cols(count_per_pr) %>% 
+  rename(project = proj,
+         proj = num,
+         n_counts = Freq) %>% 
+  select(-Var1)
 #' Corresponds with "abund_per_band" in distance.stan
 abundance_per_band_pred <- Y_pred
 abundance_per_band_pred[is.na(abundance_per_band_pred)] <- 0
@@ -264,7 +272,7 @@ distance_stan_data <- list(n_samples = n_samples_pred,
                            project = pr_pred_numeric$num,
                            abund_per_band = abundance_per_band_pred,
                            bands_per_sample = dist_bands_per_sample_pred,
-                           max_dist = max_dist_pred,
+                           max_dist = max_dist_pred/100,
                            #pr_list = pr_list_pred$proj,
                            # n_mig_strat = max(mig_strat_pred),
                            # mig_strat = mig_strat_pred,
@@ -305,22 +313,23 @@ for(p in 1:length(mean_dist)){
   
   max_dist <- max(distance_stan_data$bands_per_sample[wsel])
   
-  tmp <- colSums(abunds)
+  tmp <- colSums(abunds)[1:max_dist]
   
   n_bands[p,c(5:(max_dist +4))] <- colSums(abunds)[1:max_dist]
   n_bands[p,"n_band"] <- max_dist
   n_bands[p,"flag_no_obs_near"] <- ifelse(colSums(abunds)[1] == 0,TRUE,FALSE)
   n_bands[p,"flag_no_obs_far"] <- ifelse(colSums(abunds)[max_dist] == 0,TRUE,FALSE)
-    
+  n_bands[p,"flag_no_obs_far"] <- ifelse(colSums(abunds)[max_dist] == 0,TRUE,FALSE)
+  
 }
 
 inits <- vector("list",4)
 for(i in 1:length(inits)){
   inits[[i]] <- list(log_tau_raw = rnorm(distance_stan_data$n_projects,
-                                         mean = log(mean_dist/100),
+                                         mean = log(mean_dist/300),
                                          sd = 0.01),
                      log_TAU = rnorm(1,0,sd = 0.01),
-                     sd_log_tau = abs(rnorm(1,0.01,0.01)))
+                     sd_log_tau = abs(rnorm(1,1,0.01)))
 }
 
 
@@ -345,7 +354,46 @@ stanfit <- model$sample(
   #max_treedepth = 12,
   #seed = 123)
 
+summ <- stanfit$summary()
+saveRDS(stanfit,"output/stanfit_AMRO.rds")
 
 
+edrs <- summ %>% 
+  filter(grepl("log_tau[",variable,fixed = TRUE)) %>% 
+  mutate(edr = exp(mean)*100,
+         edr_lci = exp(q5)*100,
+         edr_uci = exp(q95)*100,
+         proj = row_number()) %>% 
+  inner_join(.,pr_list,
+             by = "proj")
 
+EDR <- summ %>% 
+  filter(variable == "log_TAU")%>% 
+  mutate(edr = exp(mean)*100,
+         edr_lci = exp(q5)*100,
+         edr_uci = exp(q95)*100,
+         project = "Hyperparameter")
 
+edrs <- edrs %>% 
+  bind_rows(.,EDR) %>% 
+  mutate(proj = as.character(proj))
+edr_plot <- ggplot(data = edrs,
+                   aes(x = project,y = edr))+
+  geom_errorbar(aes(ymin = edr_lci,
+                    ymax = edr_uci),
+                width = 0,
+                alpha = 0.5)+
+  geom_point(aes(size = n_counts))+
+  geom_errorbar(data = EDR,
+                aes(ymin = edr_lci,
+                    ymax = edr_uci),
+                width = 0,
+                colour = "darkorange")+
+  geom_point(data = EDR,
+             colour = "darkorange")+
+  scale_size_continuous(range = c(1,4),
+                        trans = "sqrt")+
+  ylab("EDR (m)")+
+  coord_flip()
+
+edr_plot
