@@ -44,14 +44,15 @@ species_sel <- "AMRO"
 
 dist_count_matrix <- dist_count_matrix %>% 
   filter(Species == species_sel) %>% 
-  select(-c(Species,proj1,proj2)) %>% 
-  relocate(Sample_ID,proj)
+  select(-c(Species,proj1,proj2,proj)) %>% 
+  #mutate(proj = Distance_Method) %>% 
+  relocate(Sample_ID,proj,Distance_Method)
 
 
 n_c_proj <- dist_count_matrix %>% 
   group_by(proj) %>% 
   summarise(n_counts = n()) %>% 
-  filter(n_counts > 100)
+  filter(n_counts > 10)
 
 dist_count_matrix <- dist_count_matrix %>% 
   filter(proj %in% n_c_proj$proj)
@@ -142,7 +143,7 @@ proj_problem <- n_bands_full %>%
   filter(flag_no_obs_near | flag_no_obs_far | flag_no_obs_mid) %>% 
   distinct()
 
-write_csv(proj_problem,"possible_prob_projs.csv")
+write_csv(proj_problem,"possible_prob_projs_March5.csv")
 
 count_design <- count_design %>% 
   filter(!proj %in% proj_problem$proj)
@@ -151,7 +152,7 @@ count_design <- count_design %>%
 n_c_proj3 <- count_design %>% 
   group_by(proj) %>% 
   summarise(n_counts = n()) %>% 
-  filter(n_counts > 100)
+  filter(n_counts > 10)
 
 count_design <- count_design %>% 
   filter(proj %in% n_c_proj3$proj)
@@ -219,8 +220,15 @@ pr_pred_numeric <- data.frame(proj = proj_pred_code,
 pr_pred_numeric <- inner_join(pr_list_pred, pr_pred_numeric, by= "proj")
 
 
-pr_list <- pr_pred_numeric %>% 
-  distinct()
+
+max_distances_proj <- dist_design %>% 
+  rowwise() %>% 
+  select(Distance_Method,Max_Distance) %>% 
+  distinct() %>% 
+  inner_join(.,n_bands_full,
+            by = "Distance_Method") %>% 
+  select(Distance_Method, n_band, Max_Distance) 
+
 #' Create vector of indices corresponding to species modelled by centred and non-
 #' centred parameterizations
 count_per_pr <- data.frame(table(pr_pred_numeric$num))
@@ -230,12 +238,15 @@ proj_cp <- as.numeric(setdiff(count_per_pr$Var1, proj_ncp))
 # species_ncp <- sort(c(species_ncp,
 #                  setdiff(as.numeric(count_per_sp$Var1), c(species_ncp, species_cp))))
 
-pr_list <- pr_list %>% 
+pr_list <- pr_pred_numeric %>% 
+  distinct() %>% 
   bind_cols(count_per_pr) %>% 
   rename(project = proj,
          proj = num,
          n_counts = Freq) %>% 
-  select(-Var1)
+  select(-Var1) %>% 
+  left_join(.,max_distances_proj,
+            by = c("project" = "Distance_Method"))
 #' Corresponds with "abund_per_band" in distance.stan
 abundance_per_band_pred <- Y_pred
 abundance_per_band_pred[is.na(abundance_per_band_pred)] <- 0
@@ -326,7 +337,7 @@ for(p in 1:length(mean_dist)){
 inits <- vector("list",4)
 for(i in 1:length(inits)){
   inits[[i]] <- list(log_tau_raw = rnorm(distance_stan_data$n_projects,
-                                         mean = log(mean_dist/300),
+                                         mean = log(mean_dist/2),
                                          sd = 0.01),
                      log_TAU = rnorm(1,0,sd = 0.01),
                      sd_log_tau = abs(rnorm(1,1,0.01)))
@@ -354,8 +365,13 @@ stanfit <- model$sample(
   #max_treedepth = 12,
   #seed = 123)
 
+
+  csv_files <- paste0("output/temp-",c(1:4),".csv")
+  stanfit <- cmdstanr::as_cmdstan_fit(files = csv_files)
+
+
 summ <- stanfit$summary()
-saveRDS(stanfit,"output/stanfit_AMRO.rds")
+saveRDS(stanfit,"output/stanfit_AMRO_method.rds")
 
 
 edrs <- summ %>% 
@@ -377,23 +393,38 @@ EDR <- summ %>%
 edrs <- edrs %>% 
   bind_rows(.,EDR) %>% 
   mutate(proj = as.character(proj))
+
 edr_plot <- ggplot(data = edrs,
                    aes(x = project,y = edr))+
   geom_errorbar(aes(ymin = edr_lci,
                     ymax = edr_uci),
                 width = 0,
                 alpha = 0.5)+
-  geom_point(aes(size = n_counts))+
+  geom_point(aes(colour = n_band))+
   geom_errorbar(data = EDR,
-                aes(ymin = edr_lci,
+                aes(x = project,y = edr,
+                    ymin = edr_lci,
                     ymax = edr_uci),
                 width = 0,
-                colour = "darkorange")+
+                colour = "darkorange",
+                inherit.aes = FALSE)+
   geom_point(data = EDR,
-             colour = "darkorange")+
-  scale_size_continuous(range = c(1,4),
-                        trans = "sqrt")+
+             colour = "darkorange",
+             aes(x = project,y = edr),
+             inherit.aes = FALSE)+
+  scale_colour_viridis_c()+
+  scale_y_continuous(limits = c(0,NA))+
+  theme_bw()+
+  #theme(text = element_text(size = 6))+
   ylab("EDR (m)")+
+  xlab("Distance Method")+
   coord_flip()
 
+
 edr_plot
+
+pdf(paste0(species_sel,"_method_level_estimates.pdf"),height = 8,
+    width = 8.5)
+print(edr_plot)
+dev.off()
+

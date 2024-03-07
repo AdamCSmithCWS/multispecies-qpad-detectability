@@ -19,7 +19,7 @@ string_split_mine(tmp,1)
 dist_count_matrix1 <- dist_count_matrix %>% 
   rowwise() %>% 
   mutate(proj1 = string_split_mine(Sample_ID,1),
-         proj2 = string_split_mine(Sample_ID,2),
+         proj2 = ifelse(grepl("(_m)$",proj1),string_split_mine(Sample_ID,2),""),
          proj = paste(proj1,proj2,sep = ":"))
 
 saveRDS(dist_count_matrix1,
