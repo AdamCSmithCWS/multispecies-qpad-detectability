@@ -44,7 +44,7 @@ species_sel <- "AMRO"
 
 dist_count_matrix <- dist_count_matrix %>% 
   filter(Species == species_sel) %>% 
-  select(-c(Species,proj1,proj2,proj)) %>% 
+  select(-c(Species,proj1,proj2)) %>% 
   #mutate(proj = Distance_Method) %>% 
   relocate(Sample_ID,proj,Distance_Method)
 
@@ -52,7 +52,7 @@ dist_count_matrix <- dist_count_matrix %>%
 n_c_proj <- dist_count_matrix %>% 
   group_by(proj) %>% 
   summarise(n_counts = n()) %>% 
-  filter(n_counts > 10)
+  filter(n_counts > 100)
 
 dist_count_matrix <- dist_count_matrix %>% 
   filter(proj %in% n_c_proj$proj)
@@ -152,17 +152,28 @@ count_design <- count_design %>%
 n_c_proj3 <- count_design %>% 
   group_by(proj) %>% 
   summarise(n_counts = n()) %>% 
-  filter(n_counts > 10)
+  filter(n_counts > 100)
 
 count_design <- count_design %>% 
   filter(proj %in% n_c_proj3$proj)
 
+landcover <- readRDS("data/landcover_covariates.rds") %>% 
+  select(Sample_ID,roaddist,ForestOnly_5x5) %>% 
+  mutate(roadside = ifelse(roaddist < 30,1,0),
+         forest = ifelse(ForestOnly_5x5 > 12,1,0)) %>% 
+  select(-c(roaddist,ForestOnly_5x5))
+
+count_design <- count_design %>% 
+  inner_join(., landcover,
+             by = "Sample_ID")
 # Create separate data frames
 counts <- count_design[,c("Sample_ID", "proj", "Distance_Method", count_names[4:length(count_names)])]
 design <- count_design[,c("Sample_ID", "proj", "Distance_Method", design_names[3:length(design_names)])]
 names(design) <- names(counts)
 col_names <- names(counts)[4:length(names(counts))]
 
+covs <- count_design[,c("Sample_ID", "proj", "Distance_Method",
+                        "roadside","forest")]
 # Change 0s to NA in counts table where appropriate based on design table
 for (i in col_names)
 {
@@ -281,6 +292,8 @@ distance_stan_data <- list(n_samples = n_samples_pred,
                            # n_species_ncp = length(species_ncp),
                            max_intervals = max_intervals_pred,
                            project = pr_pred_numeric$num,
+                           forest = covs$forest,
+                           roadside = covs$roadside,
                            abund_per_band = abundance_per_band_pred,
                            bands_per_sample = dist_bands_per_sample_pred,
                            max_dist = max_dist_pred/100,
@@ -294,7 +307,7 @@ distance_stan_data <- list(n_samples = n_samples_pred,
                            grainsize = 1)
 
 ####### Output ####################################
-save(distance_stan_data, file = "data/generated/distance_stan_data_project_1species.rda")
+save(distance_stan_data, file = "data/generated/distance_stan_data_project_cov_1species.rda")
 
 
 
