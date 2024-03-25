@@ -262,6 +262,7 @@ for(i in 1:length(inits)){
                                          sd = 0.01),
                      log_TAU = rnorm(1,0,sd = 0.01),
                      sd_log_tau_method = abs(rnorm(1,1,0.01)),
+                     sd_log_tau_species = abs(rnorm(1,1,0.01)),
                      beta_forest = 0,
                      beta_roadside = 0,
                      beta_interaction = 0,
@@ -269,8 +270,8 @@ for(i in 1:length(inits)){
                      beta_habitat = 0,
                      beta_pitch = -0.1,
                      beta_mass = 0.1,
-                     log_tau_species_raw = rnorm(log(stan_data$n_species),
-                                                 mean = mean_dist_sp,
+                     log_tau_species_raw = rnorm(stan_data$n_species,
+                                                 mean = log(mean_dist_sp),
                                                  sd = 0.01))
 }
 
