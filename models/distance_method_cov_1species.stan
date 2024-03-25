@@ -47,8 +47,8 @@ data {
   int<lower = 1> grainsize;           // grainsize for reduce_sum() function
   int<lower = 1> n_forests;           // number of unique values of proportion forest
   array[n_samples] int method;             // method being considered for each sample
-  array[n_samples] int<lower = 1, upper = n_forests> forest;             // forested == 2 open == 1 each sample
-  array[n_samples] int<lower = 1, upper = 2> roadside;             // roadside == 2 offroad == 1 each sample
+  array[n_samples] int<lower = 1, upper = n_forests> forest; // open == 1 forested == n_forest, with n_forest-1 steps between
+  array[n_samples] int<lower = 1, upper = 2> roadside;  // roadside == 2 offroad == 1 each sample
   array[n_samples, max_intervals] int abund_per_band;// abundance in distance band k for sample i
   array[n_samples] int bands_per_sample; // number of distance bands for sample i
   array[n_samples, max_intervals] real max_dist; // max distance for distance band k
@@ -58,8 +58,8 @@ transformed data{
   array[n_samples] int roadside_z;
   array[n_samples] real forest_z;
   for(j in 1:n_samples){
-  roadside_z[j] = roadside[j]-1; # transform integer values of roadside into offroad == 0 and roadside == 1
-  forest_z[j] = (forest[j]-1)/10; #transform integer values of prop forest into 0 - 1
+  roadside_z[j] = roadside[j]-1; //transform integer values of roadside into offroad == 0 and roadside == 1
+  forest_z[j] = (forest[j]-1)/10.0; //transform integer values of forest (1 : n_forests(11)) into 0 - 1 proportion forest
   }
   //print(roadside_z);
 }
@@ -88,8 +88,10 @@ transformed parameters{
 
 model {
   log_tau_raw ~ std_normal();
-  log_TAU ~ std_normal();
-  sd_log_tau ~ normal(0,0.25);
+  log_TAU ~ normal(0,0.5); // weakly informative prior implying that mean EDRs are likely
+  // between 45 and 230 m
+  sd_log_tau ~ normal(0,0.25); // weakly informative prior implying that th average
+  // among method variation is likely between -33% and +50% of the mean
   beta_forest ~ normal(0,0.25);
   beta_roadside ~ normal(0,0.25);
   beta_interaction ~ normal(0,0.25);
