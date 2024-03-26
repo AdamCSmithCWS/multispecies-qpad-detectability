@@ -270,7 +270,7 @@ for(i in 1:length(inits)){
                      beta_pitch = -0.02,
                      beta_mass = 0.02,
                      log_tau_species_raw = rnorm(stan_data$n_species,
-                                                 mean = log(mean_dist_sp),
+                                                 mean = log(mean_dist_sp)/10,
                                                  sd = 0.01))
 }
 
@@ -287,7 +287,7 @@ stanfit <- model$sample(
   # iter_warmup=1000,
   #init = 0.01,
   init = inits,
-  threads_per_chain = 3,
+  threads_per_chain = 8,
   parallel_chains = 4,
   output_dir = "output",
   output_basename = "cov_temp")#,
