@@ -8,7 +8,7 @@
 # a varying intercept for each field method and 
 # covariate effects for species-level variation (pitch, mass, migration, habitat association)
 
-
+setwd("C:/Users/SmithAC/Documents/GitHub/multispecies-qpad-detectability")
 ####### Import Libraries and External Files #######
 
 library(ape)
@@ -270,7 +270,7 @@ for(i in 1:length(inits)){
                      beta_pitch = -0.02,
                      beta_mass = 0.02,
                      log_tau_species_raw = rnorm(stan_data$n_species,
-                                                 mean = log(mean_dist_sp),
+                                                 mean = log(mean_dist_sp)/5,
                                                  sd = 0.01))
 }
 
@@ -287,7 +287,7 @@ stanfit <- model$sample(
   # iter_warmup=1000,
   #init = 0.01,
   init = inits,
-  threads_per_chain = 3,
+  threads_per_chain = 8,
   parallel_chains = 4,
   output_dir = "output",
   output_basename = "cov_temp")#,
@@ -302,7 +302,7 @@ stanfit <- model$sample(
 
 
 summ <- stanfit$summary()
-saveRDS(stanfit,paste0("output/stanfit_",species_sel,"_cov_method.rds"))
+saveRDS(stanfit,paste0("output/stanfit_multi_cov_method.rds"))
 
 
 # 
