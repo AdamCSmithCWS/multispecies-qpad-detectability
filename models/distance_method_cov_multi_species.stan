@@ -57,8 +57,8 @@ data {
   array[n_samples] int bands_per_sample; // number of distance bands for sample i
   array[n_samples, max_intervals] real max_dist; // max distance for distance band k
 
-  array[n_species] int mig_strat;        //migration strategy for each species
-  array[n_species] int habitat;        //habitat preference for each species
+  //array[n_species] int mig_strat;        //migration strategy for each species
+  //array[n_species] int habitat;        //habitat preference for each species
   array[n_species] real mass;  //log mass of species
   array[n_species] real pitch; //song pitch of species
 }
@@ -100,8 +100,8 @@ transformed parameters{
                 beta_forest * forest_z[j] +
                 beta_roadside * roadside_z[j] +
                 beta_interaction * roadside_z[j] * forest_z[j] +
-                beta_mig_strat * mig_strat[species[j]] +
-                beta_habitat * habitat[species[j]] + 
+                //beta_mig_strat * mig_strat[species[j]] +
+                //beta_habitat * habitat[species[j]] + 
                 beta_mass * mass[species[j]] +
                 beta_pitch * pitch[species[j]] +
                 log_TAU;
@@ -121,8 +121,8 @@ model {
   beta_roadside ~ normal(0,0.25);
   beta_interaction ~ normal(0,0.25);
 
-  beta_mig_strat ~ normal(0,0.25);
-  beta_habitat ~ normal(0,0.25);
+  //beta_mig_strat ~ normal(0,0.25);
+  //beta_habitat ~ normal(0,0.25);
   beta_mass ~ normal(0,0.25);
   beta_pitch ~ normal(0,0.25);
   
@@ -150,8 +150,8 @@ generated quantities {
   
   for(s in 1:n_species){
   log_tau_open_offroad[s] = sd_log_tau_species*log_tau_species_raw[species[s]] + 
-                beta_mig_strat * mig_strat[species[s]] +
-                beta_habitat * habitat[species[s]] + 
+                //beta_mig_strat * mig_strat[species[s]] +
+                //beta_habitat * habitat[species[s]] + 
                 beta_mass * mass[species[s]] +
                 beta_pitch * pitch[species[s]] +
                 log_TAU;

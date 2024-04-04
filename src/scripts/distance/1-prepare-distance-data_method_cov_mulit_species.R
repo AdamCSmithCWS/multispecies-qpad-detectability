@@ -75,8 +75,24 @@ full_df <- dist_count_matrix %>%
   filter(n_bands > 1)
 
 
+highest <- full_df %>% 
+  mutate(row_sums = rowSums(select(.,starts_with("abund_per")))) %>% 
+  group_by(Species) %>% 
+  summarise(max_total_count_sp = max(row_sums),
+            q95_sp = quantile(row_sums,0.95))
+
+full_df <- full_df %>% 
+  mutate(row_sums = rowSums(select(.,starts_with("abund_per")))) %>% 
+  left_join(.,highest,
+            by = "Species") %>% 
+  filter(.,
+         (max_total_count_sp >= 20 & row_sums < q95_sp)|
+           (max_total_count_sp < 20),
+         Species != "RUHU")
 
 
+# oddones <- full_dftt %>% 
+#   filter(row_sums > 20)
 
 
 
@@ -116,7 +132,7 @@ traits <- read.csv("data/raw/traits.csv") %>%
   rename(Species = Code) %>% 
   filter(Species %in% sp_w_data) %>% 
   mutate(species = as.integer(factor(Species)),
-         mass = as.numeric(scale(Mass)),
+         mass = as.numeric(scale(log(Mass))),
          pitch = as.numeric(scale(Pitch)),
          migrant = Migrant,
          habitat = Habitat)
@@ -150,11 +166,13 @@ full_df[,"method"] <- as.integer(factor(full_df$Distance_Method))
 
 
 method_list <- full_df %>% 
-  select(Distance_Method,method) %>% 
-  distinct() %>% 
+  group_by(Distance_Method,method) %>% 
+  summarise(n_obs = n()) %>% 
+  #distinct() %>% 
   left_join(.,dist_design,
             by = c("Distance_Method" = "Method")) %>% 
-  select(Distance_Method,method,n_bands,starts_with("max_dist")) 
+  select(Distance_Method,method,n_bands,n_obs,starts_with("max_dist")) 
+
 
 
 if(nrow(method_list) < 2){next}
@@ -193,9 +211,9 @@ stan_data <- list(
   abund_per_band = as.matrix(full_df[,paste0("abund_per_band_",1:max_bands)]),
   max_dist = as.matrix(full_df[,paste0("max_dist_",1:max_bands)])/100,
   
-  mig_strat = traits$migrant,
-  habitat = traits$habitat,
-  mass = traits$habitat,
+  #mig_strat = traits$migrant,
+  #habitat = traits$habitat,
+  mass = traits$mass,
   pitch = traits$pitch
   )
 
@@ -290,20 +308,22 @@ stanfit <- model$sample(
   threads_per_chain = 8,
   parallel_chains = 4,
   output_dir = "output",
-  output_basename = "cov_temp")#,
+  output_basename = "cov_second_temp")#,
   #pars = parms,
   #adapt_delta = 0.8,
   #max_treedepth = 12,
   #seed = 123)
 
 
-  # csv_files <- paste0("output/temp-",c(1:4),".csv")
-  # stanfit <- cmdstanr::as_cmdstan_fit(files = csv_files)
-
+  csv_files <- paste0("output/cov_second_temp-",c(1:4),".csv")
+  stanfit <- cmdstanr::as_cmdstan_fit(files = csv_files)
 
 summ <- stanfit$summary()
 saveRDS(stanfit,paste0("output/stanfit_multi_cov_method.rds"))
 
+stanfit <- readRDS(paste0("output/stanfit_multi_cov_method.rds"))
+stanarray <- cmdstanr::as_mcmc.list(stanfit)
+shinystan::launch_shinystan(as.shinystan(stanarray))
 
 # 
 # source("c:/github/handy_functions/extract_stan_dimensions.R")
