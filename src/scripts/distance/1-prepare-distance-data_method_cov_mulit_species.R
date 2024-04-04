@@ -283,8 +283,8 @@ for(i in 1:length(inits)){
                      beta_forest = 0,
                      beta_roadside = 0,
                      beta_interaction = 0,
-                     beta_mig_strat = 0,
-                     beta_habitat = 0,
+                     #beta_mig_strat = 0,
+                     #beta_habitat = 0,
                      beta_pitch = -0.02,
                      beta_mass = 0.02,
                      log_tau_species_raw = rnorm(stan_data$n_species,
@@ -315,7 +315,7 @@ stanfit <- model$sample(
   #seed = 123)
 
 
-  csv_files <- paste0("output/cov_second_temp-",c(1:4),".csv")
+  csv_files <- paste0("output/cov_third_temp-",c(1:4),".csv")
   stanfit <- cmdstanr::as_cmdstan_fit(files = csv_files)
 
 summ <- stanfit$summary()
