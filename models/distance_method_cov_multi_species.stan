@@ -85,8 +85,8 @@ parameters {
   real<lower=0> sd_log_tau_method;
   real<lower=0> sd_log_tau_species;
   
-  real beta_mig_strat;
-  real beta_habitat;
+  //real beta_mig_strat;
+  //real beta_habitat;
   real beta_mass;
   real beta_pitch;
 }

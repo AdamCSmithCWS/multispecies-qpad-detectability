@@ -308,22 +308,24 @@ stanfit <- model$sample(
   threads_per_chain = 8,
   parallel_chains = 4,
   output_dir = "output",
-  output_basename = "cov_second_temp")#,
+  output_basename = "cov_third_temp")#,
   #pars = parms,
   #adapt_delta = 0.8,
   #max_treedepth = 12,
   #seed = 123)
 
 
-  csv_files <- paste0("output/cov_third_temp-",c(1:4),".csv")
-  stanfit <- cmdstanr::as_cmdstan_fit(files = csv_files)
+  # csv_files <- paste0("output/cov_third_temp-",c(1:4),".csv")
+  # stanfit <- cmdstanr::as_cmdstan_fit(files = csv_files)
 
 summ <- stanfit$summary()
+saveRDS(summ,paste0("output/summ_multi_cov_method.rds"))
+
 saveRDS(stanfit,paste0("output/stanfit_multi_cov_method.rds"))
 
-stanfit <- readRDS(paste0("output/stanfit_multi_cov_method.rds"))
-stanarray <- cmdstanr::as_mcmc.list(stanfit)
-shinystan::launch_shinystan(as.shinystan(stanarray))
+# stanfit <- readRDS(paste0("output/stanfit_multi_cov_method.rds"))
+# stanarray <- cmdstanr::as_mcmc.list(stanfit)
+# shinystan::launch_shinystan(as.shinystan(stanarray))
 
 # 
 # source("c:/github/handy_functions/extract_stan_dimensions.R")
