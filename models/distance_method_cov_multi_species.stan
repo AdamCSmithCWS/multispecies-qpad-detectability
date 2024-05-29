@@ -79,9 +79,15 @@ parameters {
   vector[n_methods] log_tau_method_raw;
   vector[n_species] log_tau_species_raw;
   real log_TAU;
-  real beta_forest;
-  real beta_roadside;
-  real beta_interaction;
+    real BETA_forest;
+      real BETA_roadside;
+        real BETA_interaction;
+  vector[n_species] beta_forest_raw;
+  vector[n_species] beta_roadside_raw;
+  vector[n_species] beta_interaction_raw;
+  real<lower=0> sd_forest;
+    real<lower=0> sd_roadside;
+    real<lower=0> sd_interaction;
   real<lower=0> sd_log_tau_method;
   real<lower=0> sd_log_tau_species;
   
@@ -93,13 +99,21 @@ parameters {
 
 transformed parameters{
   array[n_methods,n_forests,2,n_species] real log_tau;
+  vector[n_species] beta_roadside;
+  vector[n_species] beta_forest;
+  vector[n_species] beta_interaction;
+  
+  beta_roadside = sd_roadside*beta_roadside_raw;
+  beta_forest = sd_forest*beta_forest_raw;
+  beta_interaction = sd_interaction*beta_interaction_raw;
+  
   
   for(j in 1:n_samples){
   log_tau[method[j],forest[j],roadside[j],species[j]] = sd_log_tau_method*log_tau_method_raw[method[j]] + 
                 sd_log_tau_species*log_tau_species_raw[species[j]] + 
-                beta_forest * forest_z[j] +
-                beta_roadside * roadside_z[j] +
-                beta_interaction * roadside_z[j] * forest_z[j] +
+                beta_forest[species[j]] * forest_z[j] +
+                beta_roadside[species[j]] * roadside_z[j] +
+                beta_interaction[species[j]] * roadside_z[j] * forest_z[j] +
                 //beta_mig_strat * mig_strat[species[j]] +
                 //beta_habitat * habitat[species[j]] + 
                 beta_mass * mass[species[j]] +
@@ -110,16 +124,28 @@ transformed parameters{
 
 model {
   log_tau_method_raw ~ std_normal();
+  //sum(log_tau_method_raw) ~ normal(0,0.001*n_methods); // constraint may not be necessary
   log_tau_species_raw ~ std_normal();
+  sum(log_tau_species_raw) ~ normal(0,0.001*n_species); // constraint may not be necessary
+
   log_TAU ~ normal(0,0.5); // weakly informative prior implying that mean EDRs are likely
   // between 45 and 230 m
   sd_log_tau_method ~ normal(0,0.25); // weakly informative prior implying that th average
   // among method variation is likely between -33% and +50% of the mean
   sd_log_tau_species ~ normal(0,0.1); // weakly informative prior implying that th average
 
-  beta_forest ~ normal(0,0.25);
-  beta_roadside ~ normal(0,0.25);
-  beta_interaction ~ normal(0,0.25);
+  beta_forest_raw ~ std_normal();
+  beta_roadside_raw ~ std_normal();
+  beta_interaction_raw ~ std_normal();
+  
+  BETA_forest ~ normal(0,0.25);
+  BETA_roadside ~ normal(0,0.25);
+  BETA_interaction ~ normal(0,0.25);
+  
+  sd_forest ~ normal(0,0.1);
+  sd_roadside ~ normal(0,0.1);
+  sd_interaction ~ normal(0,0.1);
+  
 
   //beta_mig_strat ~ normal(0,0.25);
   //beta_habitat ~ normal(0,0.25);
@@ -156,9 +182,9 @@ generated quantities {
                 beta_pitch * pitch[species[s]] +
                 log_TAU;
                 
-  log_tau_forest_offroad[s] = log_tau_open_offroad[s] + beta_forest;
-  log_tau_open_onroad[s] = log_tau_open_offroad[s] + beta_roadside;
-  log_tau_forest_onroad[s] = log_tau_open_offroad[s] + beta_forest + beta_roadside + beta_interaction;
+  log_tau_forest_offroad[s] = log_tau_open_offroad[s] + beta_forest[species[s]];
+  log_tau_open_onroad[s] = log_tau_open_offroad[s] + beta_roadside[species[s]];
+  log_tau_forest_onroad[s] = log_tau_open_offroad[s] + beta_forest[species[s]] + beta_roadside[species[s]] + beta_interaction[species[s]];
   
   }
   
