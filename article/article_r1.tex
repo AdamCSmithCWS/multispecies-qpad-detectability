@@ -305,6 +305,9 @@ To mitigate issues surrounding initial values being rejected in the distance mod
 All of the models made use of Stan's reduce\_sum functionality, which allows for within-chain parallelization as well as the usual across-chain parallelization.
 This was particularly useful in our case as the multi-species removal model contained over 3 million data points and the multi-species distance model contained over 4 million data points, and so computational expense was a large concern.
 All models were run on one of two multi-core processing servers, one running Ubuntu 20.04.4 LTS and one running Ubuntu 20.04.6 LTS.
+For removal modelling, we experienced no issues related to initialization, sampling, or convergence. 
+The model finished within approximately 24 hours, and all parameters had R-hat values of 1, or within 0.001 of it. 
+For distance modelling, after accounting for the issues previously mentioned, all models finished within approximately 36 hours, and all parameters had R-hat values of 1, or within 0.001 of it.
 
 \par Code is available open-source at [REDACTED FOR PEER REVIEW] and will be archived with a DOI upon acceptance of this paper.
 
@@ -421,7 +424,7 @@ Future iterations of this model could possibly include weather-related variables
 \par When considering EDR predictions, we noted that the multi-species models were not able to capture the variation of EDRs within the different trait groups.
 This was evidenced by the predicted EDRs only ever being between 69 - 115 m.
 When investigating further, Figure \ref{fig:distance_cv_traits} demonstrated a fairly clean delineation of these different trait groupings, with little variation within each.
-With this in mind, while studies have shown that traits are useful for explaining variation in EDR, traits alone do not appear to be sufficient in predicting EDRs in similar birds, because traits cannot account for species-specific variation in EDR. 
+With this in mind, while studies have shown that traits are useful for explaining variation in EDR \citep{solymos_phylogeny_2018, johnston_species_2014}, traits alone do not appear to be sufficient in predicting EDRs in similar birds, because traits cannot account for species-specific variation in EDR. 
 Future studies should seek to continue understanding drivers and predictors of detection distance in birds, both related to and complementary to traits, and think carefully about how to best group together species for purposes of multi-species modelling \citep{pacifici_guidelines_2014}.
 
 \subsection{Opportunities to Expand Estimates of Detectability in North American Landbirds}
@@ -460,13 +463,8 @@ This approach seemed to work as the initial values were no longer rejected, but 
 \par In early implementations of this study, the distance model struggled with sampling the posterior distribution, in that over a quarter of the iterations resulted in a divergent transition \citep{betancourt_diagnosing_2016, leimkuhler_simulating_2005}.
 However, after several iterations of this model, we identified that the samplers were not appropriately sampling Rufous Hummingbird's EDR, in that there appeared to be a barrier in being able to sample EDRs less than 25 m. 
 Once we removed Rufous Hummingbird from the analysis, all divergent transitions vanished.
-We demonstrate some of the odd sampling of the posterior for Rufous Hummingbird in Supplemental Materials B.
 One potential explanation is that Rufous Hummingbird had the smallest EDR of all the species in NA-POPS, and so there could be an issue with numerical stability of sampling very low values, due to the exponentiation of a quotient in the distance modelling likelihood.
 Future studies should seek to test the limits of this distance model, particularly in a Bayesian setting, using simulated data with very low EDRs.
-
-\par For removal modelling, we experienced no issues related to initialization, sampling, or convergence. 
-The model finished within approximately 24 hours, and all parameters had R-hat values of 1, or within 0.001 of it. 
-For distance modelling, after accounting for the issues previously mentioned, all models finished within approximately 36 hours, and all parameters had R-hat values of 1, or within 0.001 of it.
 
 \subsection{Improvements to this model}
 
