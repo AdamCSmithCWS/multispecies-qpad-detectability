@@ -153,6 +153,8 @@ They also found that detection distance was related to species’ traits such as
 \par \citet{solymos_phylogeny_2018} recommended using these phylogenetic and trait relationships to predict components of detectability (i.e., availability through cue rate, and perceptibility through detection distance) more broadly.
  By leveraging information provided by species with many detections in available datasets, it may be possible to inform detectability estimates for species with fewer (including potentially zero) detections \citep{sollmann_hierarchical_2016, pacifici_guidelines_2014, zipkin_impacts_2009, white_conservation_2013}.
 This could be done in two ways: by making use of shrinkage factors and partial pooling, as done in Bayesian hierarchical models \citep{gelman_what_2021, gelman_bayesian_2006}, and by accounting for phylogenetic relationships and the relative relatedness of different species, as can be done with covariance matrices or Gaussian processes \citep{bernardo_regression_1998, mcelreath_continous_2020}.
+In essence, a multi-species model of the components of detectability can be created by sharing information on the observational process across species.
+This differs from previous multi-species models which share information across the ecological process that determine abundance (TO DO Cite Gilbert et al. 2024).
 
 \par The goal of this paper is to create a multi-species model of detectability that incorporates species traits and phylogeny, to both allow for the relaxation of sample size requirements for estimating detectability, and to derive estimates of detectability for bird species without any data.
 To achieve this goal, we aim to satisfy the following objectives:
