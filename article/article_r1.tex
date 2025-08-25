@@ -59,18 +59,22 @@ Despite its importance, detectability is frequently unaccounted for in studies; 
 
 \par However, the wealth of openly-available observation data for birds in North America provides the opportunity to estimate detectability for a large number of species \citep{bennett_how_2024}. 
 The NA-POPS project is an effort to estimate detection probabilities that accounts for variability in detection processes through the use of environmental and temporal covariates for as many of North America’s landbird species as possible \citep{edwards_point_2023}.
+These covariates include time of day, time of year, whether the survey was conducted at a roadside, and the amount of forest coverage at the survey \citep{edwards_napops_2023}.
 To date, the project has estimated the two components of detectability---availability (the probability that a bird sings or gives a cue during the survey period) and perceptibility (the probability that an observer sees or hears a cueing bird)---for 319 species of birds, with an additional 19 species having estimates of either availability or perceptibility. 
-This project expanded previous efforts by the Boreal Avian Modelling project (\citet{cumming_toward_2010}, see also https://borealbirds.ca) to systematically estimate detectability for landbirds \citep{solymos_calibrating_2013, solymos_evaluating_2018}.
+The data used to estimate these components of detectability come from a number of projects of various sizes across Canada and the US, and includes point count data collected and collated by the Avian Knowledge Network, Klamath Bird Observatory, Breeding Bird Atlases, among many others (see https://na-pops.org for all data providers).
+This allowed for a range of habitats and ecosystems to be considered in the analyses, as well as a large variety of point count survey protocols.
+The NA-POPS project expanded previous efforts by the Boreal Avian Modelling project (\citet{cumming_toward_2010}, see also https://borealbirds.ca) to harmonize data \citep{barker_ecological_2015} and systematically estimate detectability for landbirds \citep{solymos_calibrating_2013, solymos_evaluating_2018}.
 
 \subsection{The QPAD Approach to Estimating Detectability}
-\par Both the NA-POPS project and previous estimates by Boreal Avian Modelling project use the QPAD approach \citep{solymos_calibrating_2013}, which is a flexible method to estimate availability and perceptibility given a harmonized dataset with the necessary survey-specific data (i.e., distance to bird from observer and time to first detection; \citet{barker_ecological_2015}).
+\par Here, and in the following subsections, we review the QPAD models as derived in \citet{solymos_calibrating_2013}; we describe them here rather than in the Methods section as we feel it is important to have context for the models that we build upon in this paper.
+Both the NA-POPS project and previous estimates by Boreal Avian Modelling project use the QPAD approach \citep{solymos_calibrating_2013}, which is a flexible method to estimate availability and perceptibility given a harmonized dataset \citep{barker_ecological_2015} with the necessary survey-specific data (i.e., distance to bird from observer and time to first detection; \citet{barker_ecological_2015}).
 In the QPAD approach, availability is calculated based on estimates of cue rate from removal models \citep{farnsworth_removal_2002, alldredge_time--detection_2007} and perceptibility is calculated based on estimates of effective detection radius (EDR) from distance sampling and the detection function \citep{buckland_introduction_2001}.
 
-\par Here, we review the QPAD model as derived in \citet{solymos_calibrating_2013}.
-We will first begin by describing the point count data that are to be used in the models.
-For each point count or sampling event $i \in [1, I]$, where $I$ is the number of sampling events in the study, we have recorded observed abundances $Y$ for species $s \in [1,S]$, where $S$ is the number of species in the study.
-If a point count used removal sampling \citep{alldredge_time--detection_2007, farnsworth_removal_2002}, then these recorded observed abundances will be further subdivided into a time band $j \in [1,J_i]$, where $J_i$ is the maximum number of time bins for sampling event $i$.
-Further, if a point count used distance sampling \citep{buckland_introduction_2001, buckland_distance_2015}, then these recorded observed abundances will also be further subdivided into a distance bin $k \in [1,K_i]$, where $K_i$ is the maximum number of distance bins for sampling event $i$.
+\subsubsection{Point Count Data}
+\par We will first begin by describing the point count data that are to be used in the models.
+For each point count or sampling event $i = 1,...,I$, where $I$ is the number of sampling events in the study, we have recorded observed abundances $Y$ for species $s = 1,...,S$, where $S$ is the number of species in the study.
+If a point count used removal sampling \citep{alldredge_time--detection_2007, farnsworth_removal_2002}, then these recorded observed abundances will be further subdivided into a time band $j = 1,...,J_i$, where $J_i$ is the maximum number of time bins for sampling event $i$.
+Further, if a point count used distance sampling \citep{buckland_introduction_2001, buckland_distance_2015}, then these recorded observed abundances will also be further subdivided into a distance bin $k = 1,...,K_i$, where $K_i$ is the maximum number of distance bins for sampling event $i$.
 Thus, we let $Y_{sijk}$ be the observed count of species $s$ during sampling event $i$, occurring in time band $j$ and/or distance band $k$.
 
 \subsubsection{QPAD Removal Modelling and Availability}
@@ -129,18 +133,17 @@ In \citep{solymos_calibrating_2013}, $\tau_s$ is estimated using maximum likelih
 EDR can then be used to estimate perceptibility, given by
 
 \begin{equation}\label{eq:perceptibility}
-	q(r) = \dfrac{\tau^2 \left\{1 - e^{-\dfrac{r^2}{\tau^2}}\right\}}{r^2}
+	q(r) = \tau^2\dfrac{\left\{1 - e^{-\dfrac{r^2}{\tau^2}}\right\}}{r^2}
 \end{equation}
 and defined as the probability that a bird is perceived by an observer when the bird is $r$ metres away, given the bird gives a cue.
 
 \subsection{Opportunities to Expand on Estimates of Detectability}
 
 \par Despite the efforts of the NA-POPS project, approximately 25\% of species in Partners in Flight’s 2016 Landbird Conservation Plan \citep{rosenberg_partners_2016} have insufficient data to directly estimate detectability \citep{edwards_point_2023}.
-The data for these species fall short of the threshold of 75 distinct observations recommended for removal and distance modelling \citep{buckland_introduction_2001, solymos_calibrating_2013}. 
+The data for these species fall short of the recommended threshold of 75 distinct observations (that is, 75 distinct observations in a time bins or 75 distinct observations in a distance bin) for removal and distance modelling \citep{buckland_introduction_2001, solymos_calibrating_2013}. 
 Many of these are rare or undersampled species, that either have low population sizes, or occur in rare or inaccessible habitats.
 %Some examples of species not modelled include Kirtland’s Warbler (\textit{Setophaga kirtlandii}) and Bicknell’s Thrush (\textit{Catharus bicknelli}), both of which have low population sizes, and LeConte’s Thrasher (\textit{Toxostoma lecontei}) and Harris’s Sparrow (\textit{Zonotrichia querula}), both of which have rare habitat associations \citep{will_handbook_2020}. 
-Species with small population sizes and rare habitats are also often considered vulnerable \citep{davies_synergistic_2004, gray_effects_1989, segura_specialist_2007}, and thus detectability information would be particularly important to inform their conservation.
-
+Species with small population sizes and rare habitats are also often considered vulnerable \citep{davies_synergistic_2004, gray_effects_1989, segura_specialist_2007}, and thus detectability information would be particularly important to inform their conservation because there would be better opportunity to build more informed decision models for allocating conservation budgets of monitoring versus action for these vulnerable species \citep{bennett_when_2018,bennett_how_2024}
 
 \par Evidence suggests detectability in birds is at least partially driven by variation in species traits.
 \citet{johnston_species_2014} showed that detection distance---and consequently perceptibility---varied with body mass and habitat association in a selection of European landbirds.
@@ -169,7 +172,8 @@ To achieve this goal, we aim to satisfy the following objectives:
 \end{enumerate}
 
 We then provide a case study of predicting detectability components for seven species for which the NA-POPS database had little to no data: Lesser Prairie-chicken (\textit{Tympanuchus pallidicinctus}), Spotted Owl (\textit{Strix occidentalis}), Bicknell’s Thrush (\textit{Catharus bicknelli}), LeConte’s Thrasher (\textit{Toxostoma lecontei}), Harris’s Sparrow (\textit{Zonotrichia querula}), Tricolored Blackbird (\textit{Agelaius tricolor}), and Kirtland’s Warbler (\textit{Setophaga kirtlandii}). 	
-All seven of these bird species are listed on Partners in Flight’s watchlist, indicating their conservation importance \citep{will_handbook_2020}. 	
+All seven of these bird species are listed on Partners in Flight’s watchlist, indicating their conservation importance \citep{will_handbook_2020}.
+By developing methods that can provide better estimates of detectability for vulnerable species such as these here, conservation managers and policy makers can better allocate conservation funding toward these species because there (TO DO) 
 
 \section{Methods}
 
@@ -180,7 +184,8 @@ Finally, we describe the experiments conducted to assess model performance and m
 \subsection{Data Collection}
 \subsubsection{Point Count Data}
 \par We used the same standardized database of point count data that was assembled through the NA-POPS project \citep{edwards_point_2023}. 
-This consists of $712,138$ point counts conducted across $292$ projects in Canada and the United States, $422,514$ of which used removal sampling \citep{alldredge_time--detection_2007, farnsworth_removal_2002} and $522,820$ of which used distance sampling \citep{buckland_introduction_2001, buckland_distance_2015}.
+This consists of $712,138$ point counts conducted across $292$ projects in Canada and the United States.
+Fifty-nine percent of these point counts used removal sampling \citep{alldredge_time--detection_2007, farnsworth_removal_2002} and 73\% of these point counts used distance sampling \citep{buckland_introduction_2001, buckland_distance_2015}, noting that point counts could employ both types of sampling simultaneously as described previously.
  All point counts were recorded in the database using a standard method developed by the Boreal Avian Modelling project \citep{barker_ecological_2015}.
 
 \subsubsection{Phylogenetic Trees}
@@ -278,7 +283,7 @@ If our prediction is true, then we would expect to see predominantly positive va
 
 \subsubsection{Objective 3: Assessment of Out-of-sample Predictions}
 \par To test our prediction that a multi-species model would be able to predict cue rates or EDRs for species with no data, we ran a 10-fold leave-species-out cross validation.
-That is, for each of the ten cross-validation runs, we held out all data for 10\% of the species for both the multi-species and single-species models.
+That is, for each of the ten cross-validation runs, we held out all data for 10\% of the species for both the multi-species and single-species models, effectively creating a "leave-species-out cross validation".
 
 \par To determine which species would be left out in each fold of the removal model cross validation, we first split the phylogenetic tree into 10 parts using the ``cutree" function in base R, which preserves relatedness in the 10 parts of the split tree.
 Then, for each of the parts of the tree, we randomly assigned a number between 1 and 10 (drawn from a uniform distribution) separately for all migratory and then all resident species.
@@ -373,13 +378,9 @@ For Kirtland's Warbler, the predicted EDR of 75.3 m fell reasonably close to the
 
 \par For Bicknell's Thrush, using Equations 1 and 2, the predicted cue rate of 0.28, predicted EDR of 73.3 m, and an example survey design of 5 minutes recording all birds within 100 m, we estimate a detectability of 0.34.
 Using the lowest predicted cue rate and EDR and the highest predicted cue rate and EDR (based on the respectively credible intervals), the range of detectabilities was from 0.09 through 0.70.
-\citet{aubry_bicknells_2018}, however, estimate detection probabilities of $\geq$ 0.74 and $\leq$ 0.88, and so even our highest potential value of detectability falls short of their estimated range.
-However, we note that \citet{aubry_bicknells_2018} are using data that specifically target Bicknell's Thrush in their range, and they are using surveys conducted at peak Bicknell's Thrush breeding time, and so it is likely that detectability will be high in that specific case.
-
-\par For Kirtland’s Warbler, using the predicted cue rate of 0.29, predicted EDR of 75.3 m, and an example survey design of 5 minutes recording all birds within 100 m, we estimate a detectability of 0.36.
+For Kirtland’s Warbler, using the predicted cue rate of 0.29, predicted EDR of 75.3 m, and an example survey design of 5 minutes recording all birds within 100 m, we estimate a detectability of 0.36.
 Similar to our Bicknell’s Thrush example, using the lowest predicted cue rate and EDR and the highest predicted cue rate and EDR (based on the respective credible intervals), the range of detectabilities was from 0.12 through 0.67.
-\citet{van_dyke_comparative_2022} found estimated detection probabilities for Kirtland’s Warbler that ranged from effectively 0, through to a detection probability of 0.73.
-In that study, they compared estimates of detectability among different jack pine (\textit{Pinus banksiana}) stands and red pine (\textit{Pinus resinosa}) stands, where the detectability was higher in jack pine stands than the red pine stands.
+
 
 \section{Discussion}
 
@@ -443,7 +444,11 @@ Regardless, we recommend continuing to make use of existing available data colle
 
 \par In the case of Bicknell's Thrush and Kirtland's Warbler, both estimates of detectability appeared to be underestimated compared to estimates found in the literature.
 This does corroborate the consistent underestimation found from the cross-validation.
-However, we note that species with low populations in specific habitats such as these species, highly-targeted surveys are often used such that reported detectability rates may be higher than for ``normal" (i.e., more broadly-sampled) species.
+For Bicknell's thrush, \citet{aubry_bicknells_2018}, estimate detection probabilities of $\geq$ 0.74 and $\leq$ 0.88, and so even our highest potential value of detectability falls short of their estimated range.
+However, we note that \citet{aubry_bicknells_2018} are using data that specifically target Bicknell's Thrush in their range, and they are using surveys conducted at peak Bicknell's Thrush breeding time, and so it is likely that detectability will be high in that specific case.
+\citet{van_dyke_comparative_2022} found estimated detection probabilities for Kirtland’s Warbler that ranged from effectively 0, through to a detection probability of 0.73.
+In that study, they compared estimates of detectability among different jack pine (\textit{Pinus banksiana}) stands and red pine (\textit{Pinus resinosa}) stands, where the detectability was higher in jack pine stands than the red pine stands.
+For species with low populations in specific habitats such as these species, highly-targeted surveys are often used such that reported detectability rates may be higher than for ``normal" (i.e., more broadly-sampled) species.
 With that in mind, it is important also to consider the applicability of this multi-species model to species where targeted surveys are more likely to occur.
 
 In all cases above, we also caution that detectability predictions for species with few data (e.g., $<$ 1000 observations) should be identified as such, so that users know that the estimate depends on data from other similar species.
@@ -471,6 +476,7 @@ Future studies should seek to test the limits of this distance model, particular
 \subsection{Improvements to this model}
 
 Both examples in the previous section highlight the need for future iterations of this multi-species model to consider environmental and temporal covariates that affect peaks in detectability through the year and for different environmental conditions. 
+Although we positioned this study to differ from other multi-species models such as (TO DO Cite Gilbert et al) by sharing information among the observational process, including information on the ecological processes that drive abundance and distribution could be crucial to improving these models. 
 This is especially true for the types of species we are interested in generating predictions for, i.e., rare and/or undersampled species.
 In general, rare species will prefer rare habitats, or will at least be confined to a very small range (as is the case with Bicknell’s Thrush and Kirtland’s Warbler above). 
 Thus, while we can generate reasonable estimates of the components of detectability (i.e., availability through cue rate and perceptibility through EDR) based on information borrowed from similar species (either through phylogeny or traits), this model as it stands may fail to glean more specific information that takes into account detectability peaks throughout the year, or detectability peaks given specific habitats. 
