@@ -1,7 +1,7 @@
 \documentclass[12pt]{article}
 %DIF LATEXDIFF DIFFERENCE FILE
 %DIF DEL article/article.tex      Fri Jul  4 13:53:25 2025
-%DIF ADD article/article_r1.tex   Fri Aug 29 16:29:10 2025
+%DIF ADD article/article_r1.tex   Thu Sep 25 08:53:52 2025
 
 \usepackage{setspace}
 \doublespacing
@@ -200,7 +200,7 @@ As previously mentioned, many factors can affect these metrics, such as survey t
 \DIFaddbegin \subsection{\DIFadd{The QPAD Approach to Estimating Detectability}}
 \DIFaddend \par \DIFaddbegin \DIFadd{Here, and in the following subsections, we review the QPAD models as derived in \mbox{%DIFAUXCMD
 \citet{solymos_calibrating_2013}}\hskip0pt%DIFAUXCMD
-; we describe them here rather than in the Methods section as we feel it is important to have context for the models that we build upon in this paper.
+.
 }
 
 \subsubsection{\DIFadd{Point Count Data}}
@@ -223,7 +223,7 @@ From \mbox{%DIFAUXCMD
 , we model $Y_{sij.}$ as
 }
 
-$${Y}\DIFadd{_{sij.} \sim \mathrm{multinomial}\left(}{\DIFadd{Y}}\DIFadd{_{si..}, \mathbf{\Pi}_{si}^{\left\{\phi\right\}}\right).}$$
+$${Y}_{sij.} \sim \mathrm{multinomial}\left({Y}_{si..}, \mathbf{\Pi}_{si}^{\left\{\phi\right\}}\right).$$
 
 \par \DIFadd{For sample $i$, $\mathbf{\Pi}_{si}^{\left\{\phi\right\}}$ is the corresponding probability vector that determines how the total individuals of species $s$ observed at sample $i$ (i.e., ${Y}_{si..}$) are to be distributed across the $J$ time bands; in essence, it is the mixing parameter.
 Let $t_{ij}$ be the maximum time for time band $j$ during sampling event $i$, and let $\phi_s$ be the unknown cue rate for species $s$.
@@ -240,7 +240,7 @@ We then have the following calculation of each component $\pi_{sij}^{\left\{\phi
 
 \par \DIFadd{We are then interested in estimating $\phi_s$, the cue rate for species $s$.
 In \mbox{%DIFAUXCMD
-\citep{solymos_calibrating_2013}}\hskip0pt%DIFAUXCMD
+\citet{solymos_calibrating_2013}}\hskip0pt%DIFAUXCMD
 , $\phi_s$ is estimated using maximum likelihood methods, for each species separately, regressed against covariates known to affect cue rate such as time of day and time of year.
 Cue rate can then be used to estimate availability, given by
 }
@@ -257,8 +257,10 @@ Cue rate can then be used to estimate availability, given by
 Thus, we consider counts ${Y}_{si.k} = \sum_{j=1}^{J}{Y}_{sijk}$. 
 From \mbox{%DIFAUXCMD
 \citet{solymos_calibrating_2013}}\hskip0pt%DIFAUXCMD
-, we model ${Y}_{si.k}$ as
-}$${Y}\DIFadd{_{si.k} \sim multinomial\left(}{\DIFadd{Y}}\DIFadd{_{si..}, \mathbf{\Pi}_{si}^{\left\{\tau\right\}}\right).}$$
+, we model ${Y}_{si.k}$ as}
+
+$${Y}_{si.k} \sim multinomial\left({Y}_{si..}, \mathbf{\Pi}_{si}^{\left\{\tau\right\}}\right).$$
+
 
 \par \DIFadd{For sample $i$, $\mathbf{\Pi}_{si}^{\left\{\tau\right\}}$ is the corresponding probability vector that determines how the total number of individuals of species $s$ observed at sample $i$ (i.e., ${Y}_{si..}$) are to be distributed across the $K$ distance bins; in essence, it is the mixing parameter. 
 Let $r_{ik}$ be the maximum distance for distance bin $k$ during sampling event $i$, and let $\tau_s$ be the unknown effective detection radius for species $s$. 
@@ -643,7 +645,7 @@ If our prediction is true, then we would expect to see \DIFdelbegin \DIFdel{majo
 \subsubsection{Objective 3: Assessment of Out-of-sample Predictions}
 \par To test our prediction that a multi-species model would be able to predict cue rates or EDRs for species with no data, we ran a 10-fold leave-species-out cross validation.
 That is, for each of the ten cross-validation runs, we held out all data for 10\% of the species for both the multi-species and single-species models\DIFdelbegin \DIFdel{.
-}\DIFdelend \DIFaddbegin \DIFadd{, effectively creating a "leave-species-out cross validation".
+}\DIFdelend \DIFaddbegin \DIFadd{, effectively creating a ``leave-species-out cross validation".
 }
 
 \par \DIFaddend To determine which species would be left out in each fold of the removal model \DIFaddbegin \DIFadd{cross validation}\DIFaddend , we first split the phylogenetic tree into 10 parts using the \DIFdelbegin \DIFdel{"}\DIFdelend \DIFaddbegin \DIFadd{``}\DIFaddend cutree" function in base R, which preserves relatedness in the 10 parts of the split tree.
@@ -814,7 +816,6 @@ We therefore recommend future implementations of the NA-POPS detectability datab
 \citet{solymos_calibrating_2013, solymos_evaluating_2018, solymos_lessons_2020} }\hskip0pt%DIFAUXCMD
 for discussions regarding goodness-of-fit of the QPAD methodology in general.
 However, even with the internal consistency, we are still then able to compare estimates of detectability obtained with a multi-species model compared to a single species model, and assess model fit within these frameworks.
-For the purposes of demonstrating a multi-species model that can provide better estimates for data sparse species, we feel this is sufficient. 
 }
 
 \DIFaddend \subsection{Predicting Detectability for Data-sparse Species}

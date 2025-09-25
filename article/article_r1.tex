@@ -77,7 +77,7 @@ These models then provide estimates of availability and perceptibility by accoun
 As previously mentioned, many factors can affect these metrics, such as survey time of day, survey time of year, vegetation structure, and nearby roads \citep{edwards_point_2023}.
 
 \subsection{The QPAD Approach to Estimating Detectability}
-\par Here, and in the following subsections, we review the QPAD models as derived in \citet{solymos_calibrating_2013}; we describe them here rather than in the Methods section as we feel it is important to have context for the models that we build upon in this paper.
+\par Here, and in the following subsections, we review the QPAD models as derived in \citet{solymos_calibrating_2013}.
 
 \subsubsection{Point Count Data}
 \par We will first begin by describing the point count data that are to be used in the models.
@@ -106,7 +106,7 @@ We then have the following calculation of each component $\pi_{sij}^{\left\{\phi
 \end{equation}
 
 \par We are then interested in estimating $\phi_s$, the cue rate for species $s$.
-In \citep{solymos_calibrating_2013}, $\phi_s$ is estimated using maximum likelihood methods, for each species separately, regressed against covariates known to affect cue rate such as time of day and time of year.
+In \citet{solymos_calibrating_2013}, $\phi_s$ is estimated using maximum likelihood methods, for each species separately, regressed against covariates known to affect cue rate such as time of day and time of year.
 Cue rate can then be used to estimate availability, given by
 
 \begin{equation}\label{eq:availability}
@@ -294,7 +294,7 @@ If our prediction is true, then we would expect to see predominantly positive va
 
 \subsubsection{Objective 3: Assessment of Out-of-sample Predictions}
 \par To test our prediction that a multi-species model would be able to predict cue rates or EDRs for species with no data, we ran a 10-fold leave-species-out cross validation.
-That is, for each of the ten cross-validation runs, we held out all data for 10\% of the species for both the multi-species and single-species models, effectively creating a "leave-species-out cross validation".
+That is, for each of the ten cross-validation runs, we held out all data for 10\% of the species for both the multi-species and single-species models, effectively creating a ``leave-species-out cross validation".
 
 \par To determine which species would be left out in each fold of the removal model cross validation, we first split the phylogenetic tree into 10 parts using the ``cutree" function in base R, which preserves relatedness in the 10 parts of the split tree.
 Then, for each of the parts of the tree, we randomly assigned a number between 1 and 10 (drawn from a uniform distribution) separately for all migratory and then all resident species.
@@ -418,7 +418,6 @@ We therefore recommend future implementations of the NA-POPS detectability datab
 
 \par We note that while this only demonstrates internal consistency because we did not test compared to a simulation study, we direct readers to \citet{solymos_calibrating_2013, solymos_evaluating_2018, solymos_lessons_2020} for discussions regarding goodness-of-fit of the QPAD methodology in general.
 However, even with the internal consistency, we are still then able to compare estimates of detectability obtained with a multi-species model compared to a single species model, and assess model fit within these frameworks.
-For the purposes of demonstrating a multi-species model that can provide better estimates for data sparse species, we feel this is sufficient. 
 
 \subsection{Predicting Detectability for Data-sparse Species}
 
