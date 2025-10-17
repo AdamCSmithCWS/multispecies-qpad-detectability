@@ -75,10 +75,14 @@ model {
   }
 
   intercept ~ normal(0.05, 0.1);
-  mu_mig_strat ~ normal(0,0.05);
-  mu_habitat ~ normal(0,0.05);
-  beta_mass ~ normal(0.01,0.005);
-  beta_pitch ~ normal(-0.01,0.005);
+  mu_mig_strat ~ normal(0,0.1);
+  mu_habitat ~ normal(0,0.1);
+  
+  beta_mass ~ normal(0,0.25);
+  beta_pitch ~ normal(0,0.25);
+  
+  // beta_mass ~ normal(0.01,0.005);
+  // beta_pitch ~ normal(-0.01,0.005);
   
   sigma ~ exponential(5);
 

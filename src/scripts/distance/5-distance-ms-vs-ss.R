@@ -21,7 +21,7 @@ load("data/generated/distance_stan_data_cv.rda")
 n_iter <- 2000
 n_warmup <- 1000
 n_chains <- 4
-refresh <- 10
+refresh <- 400
 threads_per_chain <- 3
 
 ####### Data Wrangling ############################
@@ -62,6 +62,9 @@ stan_run_ms <- ms_model$sample(
   init = inits
 )
 stan_run_ms$save_object(file = paste0("output/model_runs/distance_ms.RDS"))
+
+summ <- stan_run_ms$summary()
+
 
 # Single species model
 distance_stan_data_cv$n_mig_strat <- NULL
