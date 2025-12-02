@@ -117,10 +117,10 @@ generated quantities {
   real log_tau_open_onroad;
   real log_tau_forest_onroad;
   
-  log_tau_open_offroad = log_TAU;
-  log_tau_forest_offroad = log_TAU + beta_forest;
-  log_tau_open_onroad = log_TAU + beta_roadside;
-  log_tau_forest_onroad = log_TAU + beta_forest + beta_roadside + beta_interaction;
+  log_tau_open_offroad = log_TAU + (0.5*sd_log_tau^2);
+  log_tau_forest_offroad = log_TAU + beta_forest + (0.5*sd_log_tau^2);
+  log_tau_open_onroad = log_TAU + beta_roadside + (0.5*sd_log_tau^2);
+  log_tau_forest_onroad = log_TAU + beta_forest + beta_roadside + beta_interaction + (0.5*sd_log_tau^2);
   
   
   
