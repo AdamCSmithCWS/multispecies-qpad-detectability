@@ -1,0 +1,292 @@
+A few things in this model are doing a lot more work than they need to. Ordered roughly by expected payoff:
+
+## 1. The likelihood only depends on (species, band configuration) — collapse redundant rows
+
+This is almost certainly the biggest win. `Pi` is a function of `species[i]` and the cut points `max_dist[i, 1:K]` only. Since
+
+$$\sum_i \sum_k n_{ik}\log p_k = \sum_k \Big(\sum_i n_{ik}\Big)\log p_k$$
+
+every set of samples sharing the same species *and* the same distance-band protocol can be summed into a single multinomial. In point-count data there are usually only a handful of distinct band protocols (0–50/50–100/100+, 0–100/unlimited, etc.), so `n_samples` can drop from tens of thousands to (n_species × n_protocols). The gradient cost falls proportionally.
+
+Do this in R before passing data: group by `(species, K, max_dist row)`, sum `abund_per_band` columnwise, and feed the collapsed table in. The posterior is identical up to a constant (the multinomial coefficients, which `lupmf` drops anyway). Caveat: if you want pointwise `log_lik` for LOO at the sample level, keep the ungrouped version for the generated-quantities pass only.
+
+## 2. Hoist `exp(log_tau)` out of the loops
+
+Right now, for each sample and each band you call `exp()` on `log_tau` roughly six times — including recomputing the entire denominator inside every band iteration. That's O(n_samples × K) exponentials and a correspondingly huge autodiff tape, when there are only `n_species` distinct values. Compute once in transformed parameters:
+
+```stan
+transformed parameters {
+  vector[n_species] inv_tau_sq = exp(-2 * log_tau);  // 1 / tau^2
+}
+```
+
+Note `exp(log_tau)^2` is `exp(2 * log_tau)` — the `^2` was buying you an extra `pow()` node each time too.
+
+## 3. Simplify the band probabilities algebraically
+
+Let $q_k = \exp(-d_k^2/\tau^2)$. Then
+
+$$\pi_k = \frac{q_{k-1} - q_k}{1 - q_K}, \qquad q_0 = 1$$
+
+so you need exactly one `exp()` per band (vectorized, so one autodiff node per row), the denominator once per row, and the final band falls out automatically rather than needing the `1 - sum(...)` fix-up. It also avoids the `(1-e^{-a}) - (1-e^{-b})` subtraction, which is a mild cancellation hazard.
+
+Also drop the `Pi` matrix — `rep_matrix` plus scalar-by-scalar assignment allocates and tapes far more than a local vector per row.
+
+## 4. Vectorize the `log_tau` prior and use matrix/vector data types
+
+The `for (sp in 1:n_species)` loop over `normal()` builds one distribution node per species; vectorized it's one node. Declare `mass` and `pitch` as `vector[n_species]` and `max_dist` as a matrix so you can square it once in transformed data.
+
+## Revised model
+
+```stan
+functions {
+  real partial_sum_lupmf(array[,] int slice_abund,
+                         int start, int end,
+                         array[] int bands_per_sample,
+                         matrix max_dist_sq,
+                         array[] int species,
+                         vector inv_tau_sq) {
+    real lp = 0;
+    for (i in start:end) {
+      int K  = bands_per_sample[i];
+      int ii = i - start + 1;
+      // q[k] = P(detection distance > d_k) under half-normal
+      vector[K] q = exp(-max_dist_sq[i, 1:K]' * inv_tau_sq[species[i]]);
+      vector[K] p;
+      p[1] = 1 - q[1];
+      if (K > 1) p[2:K] = q[1:(K - 1)] - q[2:K];
+      p /= 1 - q[K];
+      lp += multinomial_lupmf(slice_abund[ii, 1:K] | p);
+    }
+    return lp;
+  }
+}
+data {
+  int<lower = 1> n_samples;
+  int<lower = 1> n_species;
+  int<lower = 2> max_intervals;
+  int<lower = 1> grainsize;
+  array[n_samples] int species;
+  array[n_samples, max_intervals] int abund_per_band;
+  array[n_samples] int bands_per_sample;
+  matrix[n_samples, max_intervals] max_dist;
+  int<lower = 1> n_mig_strat;
+  array[n_species] int mig_strat;
+  int<lower = 1> n_habitat;
+  array[n_species] int habitat;
+  vector[n_species] mass;
+  vector[n_species] pitch;
+}
+transformed data {
+  matrix[n_samples, max_intervals] max_dist_sq = square(max_dist);
+}
+parameters {
+  real intercept;
+  vector[n_mig_strat] mu_mig_strat;
+  vector[n_habitat] mu_habitat;
+  real beta_mass;
+  real beta_pitch;
+  vector[n_species] z_tau;          // non-centered
+  real<lower = 0> sigma;
+}
+transformed parameters {
+  vector[n_species] mu_tau = intercept
+                             + mu_mig_strat[mig_strat]
+                             + mu_habitat[habitat]
+                             + beta_mass * mass
+                             + beta_pitch * pitch;
+  vector[n_species] log_tau  = mu_tau + sigma * z_tau;
+  vector[n_species] inv_tau_sq = exp(-2 * log_tau);
+}
+model {
+  z_tau ~ std_normal();
+  intercept ~ normal(0.05, 0.1);
+  mu_mig_strat ~ normal(0, 0.1);
+  mu_habitat ~ normal(0, 0.1);
+  beta_mass ~ normal(0, 0.25);
+  beta_pitch ~ normal(0, 0.25);
+  sigma ~ exponential(5);
+
+  target += reduce_sum(partial_sum_lupmf,
+                       abund_per_band,
+                       grainsize,
+                       bands_per_sample,
+                       max_dist_sq,
+                       species,
+                       inv_tau_sq);
+}
+```
+
+## 5. Sampling efficiency, not just gradient cost
+
+I've written it non-centered above, but that's a genuine toss-up: with `sigma ~ exponential(5)` (prior mean 0.2) and species that have plenty of counts, the centered version may sample better. Species with few detections are the ones that generate the funnel. Run both, compare `n_eff / second` and divergence counts — if most species are data-rich, revert to centered.
+
+Also worth checking: `intercept ~ normal(0.05, 0.1)` implies τ ≈ 1.05 on whatever your distance unit is (100 m, presumably) with very little prior spread. Combined with tight priors on the coefficients, that's doing a lot of the work, which is fine, but a mis-specified scale here makes the geometry harder than it needs to be.
+
+## 6. Re-tune `grainsize` after the above
+
+Once you've collapsed rows, `reduce_sum` may be operating on only a few hundred units, and the threading overhead can exceed the benefit. Benchmark `grainsize` again — and test whether single-threaded chains with more parallel chains beat threaded ones for your setup.
+
+## 7. Profile it
+
+Wrap the likelihood and the hierarchical prior in `profile("lik") { }` / `profile("prior") { }` blocks and check `fit$profiles()` in CmdStanR. It'll tell you immediately whether the remaining time is in the multinomial, the autodiff tape, or elsewhere, rather than guessing.
+
+One numerical caveat: if any species ends up with τ much smaller than its first band cutoff, all the `q` values underflow toward zero and `p` becomes ill-conditioned. If you see that, switch the numerator to `log_diff_exp(-a_{k-1}, -a_k)` and use `multinomial_logit_lupmf`, which normalizes internally on the log scale. I'd only do that if you actually hit the problem, since it's slower.
+
+Happy to write the R-side aggregation code for step 1 if it would help.
+
+
+
+Here's a self-contained function that collapses the data, plus a check that the collapsed likelihood matches the original.
+
+## Aggregation from an existing Stan data list
+
+```r
+collapse_distance_data <- function(species,
+                                   abund_per_band,
+                                   bands_per_sample,
+                                   max_dist,
+                                   digits = 6) {
+
+  n_samples     <- length(species)
+  max_intervals <- ncol(abund_per_band)
+
+  stopifnot(nrow(abund_per_band) == n_samples,
+            nrow(max_dist)       == n_samples,
+            length(bands_per_sample) == n_samples,
+            all(bands_per_sample >= 1),
+            all(bands_per_sample <= max_intervals))
+
+  abund_per_band <- as.matrix(abund_per_band)
+  max_dist       <- as.matrix(max_dist)
+
+  # --- zero out padding beyond band K, and flag it if it wasn't already zero ---
+  pad <- col(abund_per_band) > bands_per_sample          # n_samples x max_intervals logical
+  if (any(abund_per_band[pad] != 0, na.rm = TRUE)) {
+    warning("Non-zero counts found beyond bands_per_sample; these are being dropped.")
+  }
+  abund_per_band[pad] <- 0L
+
+  # --- build a grouping key from species + the active cut points ---
+  # signif() guards against float noise creating spurious distinct groups
+  key <- vapply(seq_len(n_samples), function(i) {
+    K <- bands_per_sample[i]
+    paste(c(species[i], K, signif(max_dist[i, seq_len(K)], digits)), collapse = "|")
+  }, character(1))
+
+  f   <- factor(key, levels = unique(key))   # preserve first-appearance order
+  idx <- match(levels(f), key)               # a representative row per group
+
+  # --- sum counts within group ---
+  abund_agg <- rowsum(abund_per_band, group = f, reorder = FALSE)
+  dimnames(abund_agg) <- NULL
+  storage.mode(abund_agg) <- "integer"
+
+  species_agg <- species[idx]
+  bands_agg   <- bands_per_sample[idx]
+  dist_agg    <- max_dist[idx, , drop = FALSE]
+
+  # --- drop groups with no detections at all (they contribute nothing) ---
+  keep <- rowSums(abund_agg) > 0
+  if (any(!keep)) {
+    message(sprintf("Dropping %d group(s) with zero total counts.", sum(!keep)))
+  }
+
+  # padding in max_dist must be finite (transformed data squares the whole matrix)
+  dist_agg[!is.finite(dist_agg) & col(dist_agg) > bands_agg] <- 0
+  if (any(is.na(dist_agg))) stop("NA in max_dist within active bands.")
+
+  list(
+    n_samples        = sum(keep),
+    n_species        = length(unique(species)),
+    max_intervals    = max_intervals,
+    species          = as.integer(species_agg[keep]),
+    abund_per_band   = abund_agg[keep, , drop = FALSE],
+    bands_per_sample = as.integer(bands_agg[keep]),
+    max_dist         = dist_agg[keep, , drop = FALSE],
+    # bookkeeping, not passed to Stan:
+    group_of_sample  = as.integer(f),     # original row -> group id
+    group_kept       = keep
+  )
+}
+```
+
+Usage, assuming `stan_data` is your current list:
+
+```r
+agg <- collapse_distance_data(stan_data$species,
+                              stan_data$abund_per_band,
+                              stan_data$bands_per_sample,
+                              stan_data$max_dist)
+
+cat(sprintf("%d rows -> %d rows (%.1fx reduction)\n",
+            length(stan_data$species), agg$n_samples,
+            length(stan_data$species) / agg$n_samples))
+
+stan_data_new <- c(
+  agg[c("n_samples", "n_species", "max_intervals", "species",
+        "abund_per_band", "bands_per_sample", "max_dist")],
+  stan_data[c("n_mig_strat", "mig_strat", "n_habitat", "habitat",
+              "mass", "pitch")],
+  list(grainsize = 1)
+)
+```
+
+`grainsize = 1` lets the TBB scheduler pick; re-tune once you see the new row count.
+
+## Verify before you trust it
+
+Pick an arbitrary τ vector and confirm the two likelihoods differ only by a constant (the multinomial coefficients, which `lupmf` drops):
+
+```r
+loglik_check <- function(d, log_tau, drop_const = TRUE) {
+  total <- 0
+  for (i in seq_len(d$n_samples)) {
+    K   <- d$bands_per_sample[i]
+    tau <- exp(log_tau[d$species[i]])
+    q   <- exp(-(d$max_dist[i, 1:K]^2) / tau^2)
+    p   <- c(1 - q[1], if (K > 1) q[1:(K - 1)] - q[2:K])
+    p   <- p / (1 - q[K])
+    n   <- d$abund_per_band[i, 1:K]
+    total <- total + sum(n * log(p))          # unnormalized: constants dropped
+    if (!drop_const) total <- total + lgamma(sum(n) + 1) - sum(lgamma(n + 1))
+  }
+  total
+}
+
+set.seed(1)
+lt <- rnorm(stan_data$n_species, 0, 0.1)
+loglik_check(stan_data, lt)     # should match...
+loglik_check(agg, lt)           # ...to within ~1e-9
+```
+
+If those disagree, the usual culprit is padding: either non-zero counts sitting beyond `bands_per_sample`, or `max_dist` rows that differ in their unused tail but not their active cut points (harmless — it just makes fewer groups collapse — but worth confirming that's what's happening).
+
+## If you're starting from a tidy data frame instead
+
+If your raw data is long-format (one row per sample × band), you can skip the matrix round-trip entirely:
+
+```r
+library(dplyr); library(tidyr)
+
+collapsed <- raw_long |>
+  group_by(sample_id) |>
+  mutate(K = n(),
+         protocol = paste(signif(max_dist, 6), collapse = "|")) |>
+  ungroup() |>
+  group_by(species, protocol, K, band) |>
+  summarise(count    = sum(count),
+            max_dist = first(max_dist),
+            .groups  = "drop") |>
+  arrange(species, protocol, band)
+```
+
+then pivot `count` and `max_dist` to wide matrices padded with 0, with `bands_per_sample` = the `K` column. Same result, and it avoids ever materializing the full `n_samples × max_intervals` matrices.
+
+## Two things to keep in mind
+
+**Keep the ungrouped data if you want sample-level LOO.** The aggregated fit gives you the same posterior, but `log_lik` from it is per-group, not per-sample. Since the parameters are identical, you can compute pointwise log-likelihood on the original rows afterwards in R (or in a `generated quantities`-only run via `cmdstanr`'s `generate_quantities()`), using the draws from the fast fit.
+
+**Expect the win to be protocol-driven.** If your data comes from a handful of standardized protocols, you'll likely see something in the range of 10–100× fewer rows. If every sample has bespoke cut points — continuous-distance data binned per-observer, say — the collapse buys you little, and the gains have to come from items 2–4 in my previous message instead. The `cat()` line above tells you which world you're in before you commit to anything.
+
+
